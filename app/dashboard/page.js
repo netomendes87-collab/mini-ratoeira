@@ -16,9 +16,7 @@ import {
 export default function Dashboard() {
 
   const [clicks, setClicks] = useState([])
-
   const [search, setSearch] = useState('')
-
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -54,6 +52,13 @@ export default function Dashboard() {
     checkUser()
 
   }, [])
+
+  async function handleLogout() {
+
+    await supabase.auth.signOut()
+
+    window.location.href = '/login'
+  }
 
   if (loading) {
 
@@ -104,13 +109,6 @@ export default function Dashboard() {
     name: index + 1,
     clicks: index + 1
   }))
-
-  async function handleLogout() {
-
-    await supabase.auth.signOut()
-
-    window.location.href = '/login'
-  }
 
   return (
 
@@ -283,7 +281,7 @@ export default function Dashboard() {
         <div style={{
           background: '#1e293b',
           padding: '20px',
-          borderRadius: '10px',
+          borderRadius: '15px',
           marginBottom: '30px'
         }}>
 
@@ -315,6 +313,114 @@ export default function Dashboard() {
             </LineChart>
 
           </ResponsiveContainer>
+
+        </div>
+
+        <div style={{
+          background: '#1e293b',
+          padding: '20px',
+          borderRadius: '15px',
+          overflowX: 'auto'
+        }}>
+
+          <h2 style={{
+            marginBottom: '20px'
+          }}>
+            📋 Últimos Cliques
+          </h2>
+
+          <table
+            width="100%"
+            cellPadding="15"
+            style={{
+              borderCollapse: 'collapse'
+            }}
+          >
+
+            <thead>
+
+              <tr style={{
+                color: '#94a3b8',
+                textAlign: 'left',
+                borderBottom: '1px solid #334155'
+              }}>
+
+                <th>ID</th>
+                <th>Campanha</th>
+                <th>Keyword</th>
+                <th>Dispositivo</th>
+                <th>País</th>
+                <th>Browser</th>
+                <th>OS</th>
+                <th>Horário</th>
+
+              </tr>
+
+            </thead>
+
+            <tbody>
+
+              {filteredClicks.map((click) => (
+
+                <tr
+                  key={click.id}
+                  style={{
+                    borderBottom: '1px solid #334155'
+                  }}
+                >
+
+                  <td>{click.id}</td>
+
+                  <td style={{
+                    color: '#38bdf8'
+                  }}>
+                    {click.campaign}
+                  </td>
+
+                  <td style={{
+                    color: '#4ade80'
+                  }}>
+                    {click.keyword}
+                  </td>
+
+                  <td>
+
+                    <span style={{
+                      background:
+                        click.device === 'mobile'
+                          ? '#14532d'
+                          : '#1e3a8a',
+
+                      padding: '5px 10px',
+                      borderRadius: '20px',
+                      fontSize: '12px'
+                    }}>
+
+                      {click.device}
+
+                    </span>
+
+                  </td>
+
+                  <td>{click.country}</td>
+                  <td>{click.browser}</td>
+                  <td>{click.os}</td>
+
+                  <td>
+
+                    {new Date(
+                      click.created_at
+                    ).toLocaleString('pt-BR')}
+
+                  </td>
+
+                </tr>
+
+              ))}
+
+            </tbody>
+
+          </table>
 
         </div>
 
