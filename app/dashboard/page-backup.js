@@ -24,8 +24,6 @@ export default function Dashboard() {
   const [campaigns, setCampaigns] = useState([])
   const [conversions, setConversions] = useState([])
 
-  const [loading, setLoading] = useState(true)
-
   useEffect(() => {
 
     async function fetchData() {
@@ -36,7 +34,6 @@ export default function Dashboard() {
 
   }, [])
 
-  
   async function loadData() {
 
     try {
@@ -51,14 +48,14 @@ export default function Dashboard() {
         .order('id', { ascending: false })
 
       if (clicksError) {
-        
+        console.log(clicksError)
       }
 
       setClicks(clicksData || [])
 
-      
-      
-      
+      console.log('CLICKS:')
+      console.log(clicksData)
+      console.log(clicksError)
 
       // CONVERSIONS
       const {
@@ -70,18 +67,17 @@ export default function Dashboard() {
         .order('id', { ascending: false })
 
       if (conversionsError) {
-        
+        console.log(conversionsError)
       }
 
-      
       setConversions(conversionsData || [])
 
-      
-     
-      
+      console.log('CONVERSIONS:')
+      console.log(conversionsData)
+      console.log(conversionsError)
 
-      
-      
+      console.log('TESTE PAYOUT:')
+      console.log(conversionsData?.[0])
 
       // CAMPAIGNS
       const {
@@ -92,19 +88,18 @@ export default function Dashboard() {
         .select('*')
 
       if (campaignsError) {
-        
+        console.log(campaignsError)
       }
 
-      
       setCampaigns(campaignsData || [])
 
-      setLoading(false)
-
-      
+      console.log('CAMPAIGNS:')
+      console.log(campaignsData)
+      console.log(campaignsError)
 
     } catch (err) {
 
-      
+      console.log(err)
 
     }
 
@@ -221,7 +216,12 @@ const chartData =
     clicks: index + 1
   }))
 
-if (loading) {
+if (
+  clicks.length === 0 &&
+  conversions.length === 0 &&
+  campaigns.length === 0
+) {
+
   return (
     <div
       style={{
@@ -229,12 +229,17 @@ if (loading) {
         minHeight: '100vh',
         padding: '40px',
         color: 'white',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '32px',
         fontFamily: 'Arial'
       }}
     >
       carregando dashboard...
     </div>
   )
+
 }
 
 return (
