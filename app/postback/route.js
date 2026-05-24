@@ -23,16 +23,83 @@ export async function GET(request) {
     })
   }
 
+  // BUSCA O CLICK ORIGINAL
+
+  const { data: clickData } =
+    await supabase
+      .from('clicks')
+      .select('*')
+      .eq('click_id', clickId)
+      .single()
+
+  if (!clickData) {
+
+    return Response.json({
+      error: 'click não encontrado'
+    })
+  }
+
+  const { data: existingConversion } =
+  await supabase
+    .from('conversions')
+    .select('*')
+    .eq('click_id', clickId)
+    .single()
+
+if (existingConversion) {
+
+  return Response.json({
+    success: false,
+    message: 'conversão já existe'
+  })
+}
+  // SALVA CONVERSÃO
+
   const { error } = await supabase
     .from('conversions')
     .insert([
-  {
-    click_id: clickId,
-    payout: Number(payout || 0)
-  }
-])
+      {
+        click_id: clickId,
+
+        payout: Number(
+          payout || 0
+        ),
+
+        campanha:
+          clickData.campanha,
+
+        offer:
+          clickData.offer,
+
+        fbclid:
+          clickData.fbclid,
+
+        gclid:
+          clickData.gclid,
+
+        utm_source:
+          clickData.utm_source,
+
+        utm_campaign:
+          clickData.utm_campaign,
+
+        utm_content:
+          clickData.utm_content,
+
+        utm_term:
+          clickData.utm_term,
+
+        dispositivo:
+          clickData.dispositivo,
+
+        ip:
+          clickData.ip
+      }
+    ])
 
   if (error) {
+
+    console.error(error)
 
     return Response.json({
       error

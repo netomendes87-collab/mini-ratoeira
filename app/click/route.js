@@ -1,65 +1,208 @@
-import { supabase } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
-import { UAParser } from 'ua-parser-js'
 
-export async function GET(request) {
+import { supabase } from '@/lib/supabase'
 
-  const { searchParams } = new URL(request.url)
+export async function GET(req) {
 
-  const gclid = searchParams.get('gclid')
-  const campaign = searchParams.get('utm_campaign')
-  const keyword = searchParams.get('utm_term')
+  const { searchParams } =
+  new URL(req.url)
 
-  const userAgent =
-    request.headers.get('user-agent') || ''
+const campanha =
+  searchParams.get('campanha')
 
-  const parser = new UAParser(userAgent)
+const offer =
+  searchParams.get('offer')
 
-  const device =
-    parser.getDevice().type || 'desktop'
+const fbclid =
+  searchParams.get('fbclid')
 
-  const browser =
-    parser.getBrowser().name || 'Desconhecido'
+const gclid =
+  searchParams.get('gclid')
 
-  const os =
-    parser.getOS().name || 'Desconhecido'
+const ttclid =
+  searchParams.get('ttclid')
 
-  const ip =
-    request.headers.get('x-forwarded-for') || '127.0.0.1'
+const sub1 =
+  searchParams.get('sub1')
 
-  let country = 'Localhost'
+const sub2 =
+  searchParams.get('sub2')
 
-  try {
+const sub3 =
+  searchParams.get('sub3')
 
-    const response = await fetch(
-      `https://ipapi.co/${ip}/json/`
-    )
+const sub4 =
+  searchParams.get('sub4')
 
-    const geo = await response.json()
+const sub5 =
+  searchParams.get('sub5')  
 
-    country =
-      geo.country_name || 'Desconhecido'
+const palavra_chave =
+  searchParams.get('keyword')  
 
-  } catch (error) {
+const utm_source =
+  searchParams.get('utm_source')
 
-    console.log('Erro GEO:', error)
+const utm_campaign =
+  searchParams.get('utm_campaign')
 
-  }
+const utm_content =
+  searchParams.get('utm_content')
 
-  await supabase
-    .from('clicks')
-    .insert([
+const utm_term =
+  searchParams.get('utm_term')
+
+const userAgent =
+  req.headers.get('user-agent') || ''
+
+const dispositivo =
+  /mobile/i.test(userAgent)
+    ? 'mobile'
+    : 'desktop'
+
+
+let navegador = 'Unknown'
+
+if (userAgent.includes('Chrome')) {
+  navegador = 'Chrome'
+}
+
+else if (userAgent.includes('Firefox')) {
+  navegador = 'Firefox'
+}
+
+else if (userAgent.includes('Safari')) {
+  navegador = 'Safari'
+}
+
+else if (userAgent.includes('Edge')) {
+  navegador = 'Edge'
+}
+
+let os = 'Unknown'
+
+if (userAgent.includes('Windows')) {
+  os = 'Windows'
+}
+
+else if (userAgent.includes('Android')) {
+  os = 'Android'
+}
+
+else if (userAgent.includes('iPhone')) {
+  os = 'iPhone'
+}
+
+else if (userAgent.includes('Mac')) {
+  os = 'MacOS'
+}
+const ip =
+  req.headers.get('x-forwarded-for') ||
+  'unknown'
+
+let pais = 'Unknown'
+let cidade = 'Unknown'
+let regiao = 'Unknown'
+let isp = 'Unknown'
+
+try {
+
+  const geoRes = await fetch(
+    `http://ip-api.com/json/${ip}`
+  )
+
+  const geoData =
+    await geoRes.json()
+
+  pais =
+    geoData.country || 'Unknown'
+
+  cidade =
+    geoData.city || 'Unknown'
+
+  regiao =
+    geoData.regionName || 'Unknown'
+
+  isp =
+    geoData.isp || 'Unknown'
+
+} catch (err) {
+
+  console.error(
+    'Erro GEO:',
+    err
+  )
+
+}
+
+const clickId =
+  crypto.randomUUID()
+let source = 'Direct'
+
+if (fbclid) {
+  source = 'Facebook'
+}
+
+else if (gclid) {
+  source = 'Google'
+}
+
+else if (ttclid) {
+  source = 'TikTok'
+}
+  const { error } = await supabase
+  .from('clicks')
+  .insert([
       {
-        gclid: gclid || '',
-        campaign: campaign || '',
-        keyword: keyword || '',
-        device: device,
-        browser: browser,
-        os: os,
-        ip: ip,
-        country: country
+        click_id: clickId,
+    campanha,
+    offer,
+
+    utm_source: source,
+
+    fbclid,
+    gclid,
+    ttclid,
+
+    sub1,
+    sub2,
+    sub3,
+    sub4,
+    sub5,
+
+    palavra_chave,
+
+    
+    utm_campaign,
+    utm_content,
+    utm_term,
+
+    ip,
+    dispositivo,
+
+    navegador,
+    os,
+
+    pais,
+cidade,
+regiao,
+isp,
+
       }
     ])
+    
+  if (error) {
+  console.error(error)
+}
+  const redirectUrl = new URL(offer)
 
-  return NextResponse.redirect('https://google.com')
+redirectUrl.searchParams.set(
+  'click_id',
+  clickId
+)
+
+return NextResponse.redirect(
+  redirectUrl
+)
+
 }
