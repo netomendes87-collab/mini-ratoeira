@@ -302,7 +302,39 @@ isp,
   )
 
 }
-  const redirectUrl = new URL(offer)
+  if (is_bot) {
+
+  console.log(
+    'BOT BLOQUEADO:',
+    ip
+  )
+
+  return NextResponse.redirect(
+    'https://google.com'
+  )
+
+}
+
+const redirectUrl = new URL(offer)
+
+redirectUrl.searchParams.set(
+  'click_id',
+  clickId
+  
+if (is_bot) {
+
+  console.log(
+    'BOT BLOQUEADO:',
+    ip
+  )
+
+  return NextResponse.redirect(
+    'https://google.com'
+  )
+
+}
+
+const redirectUrl = new URL(offer)
 
 redirectUrl.searchParams.set(
   'click_id',
