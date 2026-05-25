@@ -96,9 +96,13 @@ else if (userAgent.includes('iPhone')) {
 else if (userAgent.includes('Mac')) {
   os = 'MacOS'
 }
+const forwardedFor =
+  req.headers.get('x-forwarded-for')
+
 const ip =
-  req.headers.get('x-forwarded-for') ||
-  'unknown'
+  forwardedFor
+    ? forwardedFor.split(',')[0].trim()
+    : 'unknown'
 
 let pais = 'Unknown'
 let cidade = 'Unknown'
@@ -158,6 +162,7 @@ else if (ttclid) {
     campanha,
     offer,
 
+    utm_source,
     utm_source: source,
 
     fbclid,
