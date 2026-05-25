@@ -201,6 +201,34 @@ redirectUrl.searchParams.set(
   clickId
 )
 
+if (gclid) {
+  redirectUrl.searchParams.set(
+    'gclid',
+    gclid
+  )
+}
+
+if (utm_source) {
+  redirectUrl.searchParams.set(
+    'utm_source',
+    utm_source
+  )
+}
+
+if (utm_campaign) {
+  redirectUrl.searchParams.set(
+    'utm_campaign',
+    utm_campaign
+  )
+}
+
+if (utm_term) {
+  redirectUrl.searchParams.set(
+    'utm_term',
+    utm_term
+  )
+}
+
 return NextResponse.redirect(
   redirectUrl
 )
