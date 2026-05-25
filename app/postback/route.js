@@ -1,112 +1,60 @@
-import { createClient } from '@supabase/supabase-js'
+import { NextResponse } from 'next/server'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-)
+import { supabase } from '@/lib/supabase'
 
-export async function GET(request) {
+export async function GET(req) {
 
   const { searchParams } =
-    new URL(request.url)
+    new URL(req.url)
 
-  const clickId =
+  const click_id =
     searchParams.get('click_id')
 
   const payout =
     searchParams.get('payout')
 
-  if (!clickId) {
+  const revenue =
+    searchParams.get('revenue')
 
-    return Response.json({
-      error: 'click_id obrigatório'
+  const status =
+    searchParams.get('status')
+
+  const network =
+    searchParams.get('network')
+
+  if (!click_id) {
+
+    return NextResponse.json({
+      error: 'missing click_id'
     })
+
   }
 
-  // BUSCA O CLICK ORIGINAL
-
-  const { data: clickData } =
+  const { error } =
     await supabase
-      .from('clicks')
-      .select('*')
-      .eq('click_id', clickId)
-      .single()
-
-  if (!clickData) {
-
-    return Response.json({
-      error: 'click não encontrado'
-    })
-  }
-
-  const { data: existingConversion } =
-  await supabase
-    .from('conversions')
-    .select('*')
-    .eq('click_id', clickId)
-    .single()
-
-if (existingConversion) {
-
-  return Response.json({
-    success: false,
-    message: 'conversão já existe'
-  })
-}
-  // SALVA CONVERSÃO
-
-  const { error } = await supabase
-    .from('conversions')
-    .insert([
-      {
-        click_id: clickId,
-
-        payout: Number(
-          payout || 0
-        ),
-
-        campanha:
-          clickData.campanha,
-
-        offer:
-          clickData.offer,
-
-        fbclid:
-          clickData.fbclid,
-
-        gclid:
-          clickData.gclid,
-
-        utm_source:
-          clickData.utm_source,
-
-        utm_campaign:
-          clickData.utm_campaign,
-
-        utm_content:
-          clickData.utm_content,
-
-        utm_term:
-          clickData.utm_term,
-
-        dispositivo:
-          clickData.dispositivo,
-
-        ip:
-          clickData.ip
-      }
-    ])
+      .from('conversions')
+      .insert([
+        {
+          click_id,
+          payout,
+          revenue,
+          status,
+          network
+        }
+      ])
 
   if (error) {
 
     console.error(error)
 
-    return Response.json({
+    return NextResponse.json({
       error
     })
+
   }
 
-  return Response.json({
+  return NextResponse.json({
     success: true
   })
+
 }
