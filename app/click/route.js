@@ -54,6 +54,38 @@ const utm_term =
 
 const userAgent =
   req.headers.get('user-agent') || ''
+  let is_bot = false
+let bot_score = 0
+
+const botPatterns = [
+  'bot',
+  'crawler',
+  'spider',
+  'scrapy',
+  'curl',
+  'wget',
+  'python',
+  'headless',
+  'phantom',
+  'selenium',
+  'facebookexternalhit',
+  'googlebot',
+  'bingbot'
+]
+
+for (const pattern of botPatterns) {
+
+  if (
+    userAgent.toLowerCase()
+    .includes(pattern)
+  ) {
+
+    is_bot = true
+    bot_score += 50
+
+  }
+
+}
 
 const dispositivo =
   /mobile/i.test(userAgent)
@@ -108,6 +140,9 @@ let pais = 'Unknown'
 let cidade = 'Unknown'
 let regiao = 'Unknown'
 let isp = 'Unknown'
+let is_vpn = false
+let is_proxy = false
+let is_datacenter = false
 
 try {
 
@@ -129,6 +164,57 @@ try {
 
   isp =
     geoData.isp || 'Unknown'
+
+    const ispName =
+  isp.toLowerCase()
+
+const datacenterPatterns = [
+  'google',
+  'amazon',
+  'aws',
+  'oracle',
+  'microsoft',
+  'azure',
+  'digitalocean',
+  'ovh',
+  'hetzner',
+  'contabo',
+  'linode',
+  'vultr'
+]
+
+for (const dc of datacenterPatterns) {
+
+  if (ispName.includes(dc)) {
+
+    is_datacenter = true
+    bot_score += 40
+
+  }
+
+}
+
+if (
+  geoData.proxy === true
+) {
+
+  is_proxy = true
+  bot_score += 30
+
+}
+
+if (
+  geoData.hosting === true
+) {
+
+  is_vpn = true
+  bot_score += 30
+
+}
+
+if (bot_score >= 50) {
+  is_bot = true
+}
 
 } catch (err) {
 
@@ -159,15 +245,23 @@ else if (ttclid) {
   .insert([
       {
         click_id: clickId,
-    campanha,
-    offer,
 
-    utm_source,
-    utm_source: source,
+campanha,
+offer,
 
-    fbclid,
-    gclid,
-    ttclid,
+utm_source,
+
+traffic_source: source,
+
+fbclid,
+gclid,
+ttclid,
+
+is_bot,
+bot_score,
+is_vpn,
+is_proxy,
+is_datacenter,
 
     sub1,
     sub2,
