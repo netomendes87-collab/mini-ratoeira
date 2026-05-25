@@ -295,6 +295,13 @@ isp,
   if (error) {
   console.error(error)
 }
+  if (is_bot) {
+
+  return NextResponse.redirect(
+    'https://google.com'
+  )
+
+}
   const redirectUrl = new URL(offer)
 
 redirectUrl.searchParams.set(
