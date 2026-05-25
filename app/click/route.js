@@ -54,8 +54,7 @@ const utm_term =
 
 const userAgent =
   req.headers.get('user-agent') || ''
-  let is_bot = false
-let bot_score = 0
+
 
 const botPatterns = [
   'bot',
@@ -143,6 +142,8 @@ let isp = 'Unknown'
 let is_vpn = false
 let is_proxy = false
 let is_datacenter = false
+let is_bot = false
+let bot_score = 0
 
 try {
 
