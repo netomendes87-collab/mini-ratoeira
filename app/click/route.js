@@ -141,6 +141,13 @@ const ip =
     ? forwardedFor.split(',')[0].trim()
     : 'unknown'
 
+const ignoredIps = [
+  '177.128.36.154'
+]
+
+const isInternalTraffic =
+  ignoredIps.includes(ip)
+
 let pais = 'Unknown'
 let cidade = 'Unknown'
 let regiao = 'Unknown'
@@ -314,14 +321,24 @@ isp,
   )
 
 }
+if (isInternalTraffic) {
 
+  console.log(
+    'Tráfego interno ignorado'
+  )
+
+  return NextResponse.redirect(
+    new URL(offer)
+  )
+
+}
 const redirectUrl = new URL(offer)
 
 redirectUrl.searchParams.set(
   'click_id',
   clickId
-  
-if (is_bot) {
+
+ if (is_bot) {
 
   console.log(
     'BOT BLOQUEADO:',

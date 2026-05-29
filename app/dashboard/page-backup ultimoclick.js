@@ -24,6 +24,8 @@ export default function Dashboard() {
   const [campaigns, setCampaigns] = useState([])
   const [conversions, setConversions] = useState([])
 
+  const [loading, setLoading] = useState(true)
+
   useEffect(() => {
 
     async function fetchData() {
@@ -34,6 +36,7 @@ export default function Dashboard() {
 
   }, [])
 
+  
   async function loadData() {
 
     try {
@@ -48,14 +51,14 @@ export default function Dashboard() {
         .order('id', { ascending: false })
 
       if (clicksError) {
-        console.log(clicksError)
+        
       }
 
       setClicks(clicksData || [])
 
-      console.log('CLICKS:')
-      console.log(clicksData)
-      console.log(clicksError)
+      
+      
+      
 
       // CONVERSIONS
       const {
@@ -67,17 +70,18 @@ export default function Dashboard() {
         .order('id', { ascending: false })
 
       if (conversionsError) {
-        console.log(conversionsError)
+        
       }
 
+      
       setConversions(conversionsData || [])
 
-      console.log('CONVERSIONS:')
-      console.log(conversionsData)
-      console.log(conversionsError)
+      
+     
+      
 
-      console.log('TESTE PAYOUT:')
-      console.log(conversionsData?.[0])
+      
+      
 
       // CAMPAIGNS
       const {
@@ -88,18 +92,19 @@ export default function Dashboard() {
         .select('*')
 
       if (campaignsError) {
-        console.log(campaignsError)
+        
       }
 
+      
       setCampaigns(campaignsData || [])
 
-      console.log('CAMPAIGNS:')
-      console.log(campaignsData)
-      console.log(campaignsError)
+      setLoading(false)
+
+      
 
     } catch (err) {
 
-      console.log(err)
+      
 
     }
 
@@ -216,12 +221,7 @@ const chartData =
     clicks: index + 1
   }))
 
-if (
-  clicks.length === 0 &&
-  conversions.length === 0 &&
-  campaigns.length === 0
-) {
-
+if (loading) {
   return (
     <div
       style={{
@@ -229,17 +229,12 @@ if (
         minHeight: '100vh',
         padding: '40px',
         color: 'white',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '32px',
         fontFamily: 'Arial'
       }}
     >
       carregando dashboard...
     </div>
   )
-
 }
 
 return (
@@ -248,89 +243,187 @@ return (
   style={{
     background: '#020c2b',
     minHeight: '100vh',
-    padding: '40px',
-    color: 'white',
-    fontFamily: 'Arial'
+    padding: '40px'
   }}
- >
+>
+
+<div
+  style={{
+    maxWidth: '1700px',
+    margin: '0 auto'
+  }}
+>
+
+</div>
+    <div
+  style={{
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '40px',
+    flexWrap: 'wrap',
+    gap: '20px'
+  }}
+>
+
+  <div>
     <h1
       style={{
-        marginBottom: '30px',
-        fontSize: '42px'
+        fontSize: '48px',
+        marginBottom: '10px'
       }}
     >
       🚀 Mini Ratoeira
     </h1>
 
-    {/* CARDS */}
-
-    <div
+    <p
       style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '20px',
-        marginBottom: '40px'
+        color: '#6fa8ff',
+        fontSize: '18px'
       }}
     >
+      Tracker avançado de campanhas
+    </p>
+  </div>
 
-      <div style={cardStyle}>
-        <h3>Total Clicks</h3>
-        <h1>{totalClicks}</h1>
-      </div>
+  <div
+    style={{
+      display: 'flex',
+      gap: '15px',
+      alignItems: 'center',
+      flexWrap: 'wrap'
+    }}
+  >
 
-      <div style={cardStyle}>
-        <h3>Campanhas</h3>
-        <h1>{uniqueCampaigns}</h1>
-      </div>
+    <select
+      style={{
+        background: '#13234a',
+        color: 'white',
+        border: '1px solid #29407a',
+        padding: '12px 18px',
+        borderRadius: '12px',
+        fontSize: '16px'
+      }}
+    >
+      <option>Hoje</option>
+      <option>7 Dias</option>
+      <option>30 Dias</option>
+    </select>
 
-      <div style={cardStyle}>
-        <h3>Desktop</h3>
-        <h1>{desktopClicks}</h1>
-      </div>
+    <button
+      style={{
+        background: '#22c55e',
+        border: 'none',
+        padding: '14px 24px',
+        borderRadius: '14px',
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: '16px',
+        cursor: 'pointer',
+        boxShadow: '0 0 15px rgba(34,197,94,0.3)'
+      }}
+    >
+      + Nova Campanha
+    </button>
 
-      <div style={cardStyle}>
-        <h3>Mobile</h3>
-        <h1>{mobileClicks}</h1>
-      </div>
+  </div>
 
-      <div style={cardStyle}>
-        <h3>Conversões</h3>
-        <h1>{totalConversions}</h1>
-      </div>
+</div>
 
-      <div style={cardStyle}>
-        <h3>Revenue</h3>
-        <h1>${totalRevenue}</h1>
-      </div>
+{/* CARDS */}
 
-      <div style={cardStyle}>
-        <h3>CR%</h3>
-        <h1>{conversionRate}%</h1>
-      </div>
+<div
+  style={{
+    display: 'grid',
+    gridTemplateColumns:
+      'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: '20px',
+    marginBottom: '40px'
+  }}
+>
 
-      <div style={cardStyle}>
-        <h3>EPC</h3>
-        <h1>${epc}</h1>
-      </div>
+  <div style={cardStyle}>
+    <h3>🖱️ Total Clicks</h3>
+    <h1>{totalClicks}</h1>
+  </div>
 
-      <div style={cardStyle}>
-        <h3>Spend</h3>
-        <h1>${totalSpend}</h1>
-      </div>
+  <div style={cardStyle}>
+    <h3>📂 Campanhas</h3>
+    <h1>{uniqueCampaigns.length}</h1>
+  </div>
 
-      <div style={cardStyle}>
-        <h3>Profit</h3>
-        <h1>${profit}</h1>
-      </div>
+  <div style={cardStyle}>
+    <h3>💻 Desktop</h3>
+    <h1>{desktopClicks}</h1>
+  </div>
 
-      <div style={cardStyle}>
-        <h3>ROI</h3>
-        <h1>{roi}%</h1>
-      </div>
+  <div style={cardStyle}>
+    <h3>📱 Mobile</h3>
+    <h1>{mobileClicks}</h1>
+  </div>
 
-    </div>
+  <div style={cardStyle}>
+    <h3>🎯 Conversões</h3>
+    <h1>{totalConversions}</h1>
+  </div>
 
-      {/* GRÁFICO */}
+  <div style={cardStyle}>
+    <h3>💰 Revenue</h3>
+    <h1>
+      ${Number(totalRevenue || 0).toFixed(2)}
+    </h1>
+  </div>
+
+  <div style={cardStyle}>
+    <h3>📈 CR%</h3>
+    <h1>{conversionRate}%</h1>
+  </div>
+
+  <div style={cardStyle}>
+    <h3>⚡ EPC</h3>
+    <h1>
+      ${Number(epc || 0).toFixed(2)}
+    </h1>
+  </div>
+
+  <div style={cardStyle}>
+    <h3>💸 Spend</h3>
+    <h1>
+      ${Number(totalSpend || 0).toFixed(2)}
+    </h1>
+  </div>
+
+  <div style={cardStyle}>
+    <h3>🧾 Profit</h3>
+    <h1
+      style={{
+        color:
+          profit >= 0
+            ? '#4ade80'
+            : '#ef4444'
+      }}
+    >
+      ${Number(profit || 0).toFixed(2)}
+    </h1>
+  </div>
+
+  <div style={cardStyle}>
+    <h3>📊 ROI</h3>
+    <h1
+      style={{
+        color:
+          roi >= 0
+            ? '#4ade80'
+            : '#ef4444'
+      }}
+    >
+      {Number(roi || 0).toFixed(2)}%
+    </h1>
+  </div>
+
+</div>
+
+{/* GRÁFICO */}
 
       <div
         style={{
@@ -347,15 +440,17 @@ return (
 
         <ResponsiveContainer
           width="100%"
-          height={300}
-        >
+          height={420}
+
+       >
 
           <LineChart data={chartData}>
 
             <CartesianGrid
-              stroke="#1f2d52"
-              strokeDasharray="3 3"
-            />
+              stroke="#22345f"
+              strokeDasharray="4 4"
+
+           />
 
             <XAxis
               dataKey="name"
@@ -370,8 +465,13 @@ return (
               type="monotone"
               dataKey="clicks"
               stroke="#4ade80"
-              strokeWidth={3}
-            />
+              strokeWidth={4}
+              dot={false}
+              activeDot={{
+                r: 6
+            }}
+            
+           />
 
           </LineChart>
 
@@ -539,6 +639,7 @@ return (
       </div>
 
    </div>
+
 
   )
   }
