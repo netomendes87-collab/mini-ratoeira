@@ -321,6 +321,7 @@ isp,
   )
 
 }
+
 if (isInternalTraffic) {
 
   console.log(
@@ -329,24 +330,6 @@ if (isInternalTraffic) {
 
   return NextResponse.redirect(
     new URL(offer)
-  )
-
-}
-const redirectUrl = new URL(offer)
-
-redirectUrl.searchParams.set(
-  'click_id',
-  clickId
-
- if (is_bot) {
-
-  console.log(
-    'BOT BLOQUEADO:',
-    ip
-  )
-
-  return NextResponse.redirect(
-    'https://google.com'
   )
 
 }
@@ -359,31 +342,39 @@ redirectUrl.searchParams.set(
 )
 
 if (gclid) {
+
   redirectUrl.searchParams.set(
     'gclid',
     gclid
   )
+
 }
 
 if (utm_source) {
+
   redirectUrl.searchParams.set(
     'utm_source',
     utm_source
   )
+
 }
 
 if (utm_campaign) {
+
   redirectUrl.searchParams.set(
     'utm_campaign',
     utm_campaign
   )
+
 }
 
 if (utm_term) {
+
   redirectUrl.searchParams.set(
     'utm_term',
     utm_term
   )
+
 }
 
 return NextResponse.redirect(

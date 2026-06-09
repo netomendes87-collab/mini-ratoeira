@@ -1,20 +1,99 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-} from 'recharts'
+  calculateMetrics
+} from '@/lib/dashboard/metrics'
+import {
+  calculateFraud
+} from '@/lib/dashboard/fraud'
+import {
+  calculateCampaigns
+} from '@/lib/dashboard/campaigns'
+import {
+  calculateAlerts
+} from '@/lib/dashboard/alerts'
 
+import StatsCards from '../components/dashboard/cards/StatsCards'
+import FinancialChart from '../components/dashboard/charts/FinancialChart'
+import ActivityFeed from '../components/dashboard/feeds/ActivityFeed'
+import LiveVisitors from '../components/dashboard/feeds/LiveVisitors'
+import CampaignTable from '../components/dashboard/tables/CampaignTable'
+import MapWorld from '../components/dashboard/charts/MapWorld'
+import AntiFraud from '../components/dashboard/AntiFraud'
+import TrafficQuality from '../components/dashboard/TrafficQuality'
+import GeoPerformance from '../components/dashboard/GeoPerformance'
+import OfferPerformance from '../components/dashboard/OfferPerformance'
+import TopKeywords from '../components/dashboard/TopKeywords'
+import AITrafficScore from '../components/dashboard/cards/AITrafficScore'
+import Alerts from '../components/dashboard/Alerts'
+import useDashboardData from '@/lib/dashboard/useDashboardData'
+import {calculateAnalytics} from '@/lib/dashboard/analytics'
+import {buildTrafficSources} from '@/lib/services/traffic'
+import {buildKeywordStats} from '@/lib/services/keywords'
+import {buildGeoPerformance,buildMapData} from '@/lib/services/geo'
+import {buildOfferPerformance} from '@/lib/services/offers'
+import {buildBlacklistIPs} from '@/lib/services/blacklist'
+import {buildDailyStats} from '@/lib/services/daily'
+import {buildHourStats} from '@/lib/services/hours'
+import {buildActivityFeed} from '@/lib/services/activity'
+import {buildDeviceStats,buildUniqueCampaigns} from '@/lib/services/devices'
+import {buildFraudStats,buildTrafficQualityStats} from '@/lib/services/fraud'
+import ClickDetailsModal from '../components/dashboard/modals/ClickDetailsModal'
+import CampaignModal from '../components/dashboard/modals/CampaignModal'
+import TrafficSources from '../components/dashboard/tables/TrafficSources'
+import TrafficScore from '../components/dashboard/cards/TrafficScore'
+import SuspiciousTraffic from '../components/dashboard/tables/SuspiciousTraffic'
+import AutoBlacklist from '../components/dashboard/tables/AutoBlacklist'
+import NegativeROI from '../components/dashboard/tables/NegativeROI'
+import DeadCampaigns from '../components/dashboard/tables/DeadCampaigns'
+import CampaignManager from '../components/dashboard/CampaignManager'
+import RecentClicks from '../components/dashboard/tables/RecentClicks'
+import RecentConversions from '../components/dashboard/tables/RecentConversions'
+import PerformanceTables from '../components/dashboard/tables/PerformanceTables'
+
+const pulseAnimation = `
+@keyframes shine {
+
+  0% {
+    left: -120%;
+  }
+
+  100% {
+    left: 130%;
+  }
+
+}
+
+@keyframes pulse {
+
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+
+  50% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+
+}
+`
 export default function Dashboard() {
   const router = useRouter()
+
+  const [liveVisitors, setLiveVisitors] =
+  useState([])
+  
+  const [activityFeed, setActivityFeed] =
+  useState([])
 
   useEffect(() => {
     checkUser()
@@ -33,95 +112,77 @@ export default function Dashboard() {
     router.push('/login')
   }
 
-  const [clicks, setClicks] = useState([])
-  const [campaigns, setCampaigns] = useState([])
-  const [selectedCampaign, setSelectedCampaign] = useState('all')
-  const [selectedPeriod, setSelectedPeriod] = useState('all')
-  const [conversions, setConversions] = useState([])
-  const [showCampaignModal, setShowCampaignModal] = useState(false)
-  const [newCampaignName, setNewCampaignName] = useState('')
-  const [newCampaignOffer, setNewCampaignOffer] = useState('')
-  const [newCampaignSpend, setNewCampaignSpend] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [selectedClick,setSelectedClick] = useState(null)
+  const [editingCampaignId, setEditingCampaignId] = useState(null)
+  const [selectedCampaign, setSelectedCampaign] =
+  useState('all')
 
-  useEffect(() => {
-    loadData()
+  const [selectedPeriod, setSelectedPeriod] =
+  useState('all')
 
-    const channel = supabase
-      .channel('dashboard-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'clicks',
-        },
-        () => {
-          loadData()
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'conversions',
-        },
-        () => {
-          loadData()
-        }
-      )
-      .subscribe()
+  const [showCampaignModal, setShowCampaignModal] =
+  useState(false)
 
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [])
+  const [newCampaignName, setNewCampaignName] =
+  useState('')
 
-  async function loadData() {
-    try {
-      // CLICKS
-      const { data: clicksData, error: clicksError } = await supabase
-        .from('clicks')
-        .select('*')
-        .order('id', { ascending: false })
+  const [newCampaignOffer, setNewCampaignOffer] =
+  useState('')
 
-      if (clicksError) {
-        console.error(clicksError)
+  const [newCampaignSpend, setNewCampaignSpend] =
+  useState('')
+  const {
+  clicks,
+  conversions,
+  campaigns,
+  loading,
+  loadData
+} = useDashboardData()
+       
+  async function handleBlockIP(ip) {
+
+  const { error } = await supabase
+    .from('blacklist')
+    .insert([
+      {
+        ip
       }
+    ])
 
-      setClicks(clicksData || [])
+  if (error) {
 
-      // CONVERSIONS
-      const { data: conversionsData, error: conversionsError } =
-        await supabase
-          .from('conversions')
-          .select('*')
-          .order('id', { ascending: false })
+    console.log(error)
 
-      if (conversionsError) {
-        console.error(conversionsError)
-      }
+    alert('Erro ao bloquear IP')
 
-      setConversions(conversionsData || [])
+    return
 
-      // CAMPAIGNS
-      const { data: campaignsData, error: campaignsError } = await supabase
-        .from('campaigns')
-        .select('*')
-
-      if (campaignsError) {
-        console.error(campaignsError)
-      }
-
-      setCampaigns(campaignsData || [])
-
-      setLoading(false)
-    } catch (err) {
-      console.error(err)
-      setLoading(false)
-    }
   }
+
+  alert(`IP ${ip} bloqueado com sucesso`)
+
+}
+
+async function handleDeleteCampaign(id) {
+  const confirmar = confirm(
+    'Deseja realmente excluir esta campanha?'
+  )
+
+  if (!confirmar) return
+
+  const { error } = await supabase
+    .from('campaigns')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    alert('Erro ao excluir campanha')
+    console.error(error)
+    return
+  }
+
+  loadData()
+}
 
   // MÉTRICAS
 const isWithinPeriod = (date) => {
@@ -160,6 +221,16 @@ const filteredClicks = clicks.filter((click) => {
   return matchCampaign && matchPeriod
 })
 
+useEffect(() => {
+
+  setLiveVisitors(
+    [...filteredClicks]
+      .reverse()
+      .slice(0, 8)
+  )
+
+}, [clicks, selectedCampaign, selectedPeriod])
+
 // MÉTRICAS
 const filteredConversions = conversions.filter((conv) => {
   const matchCampaign =
@@ -173,176 +244,241 @@ const filteredConversions = conversions.filter((conv) => {
   return matchCampaign && matchPeriod
 })
 
-const totalConversions = useMemo(() => {
-  return filteredConversions.length
-}, [filteredConversions])
+useEffect(() => {
 
-const totalRevenue = useMemo(() => {
-  return (filteredConversions || []).reduce((acc, conv) => {
-    return acc + Number(conv.payout || conv.commission || 0)
-  }, 0)
-}, [filteredConversions])
-
-const totalSpend = useMemo(() => {
-  const filteredCampaigns =
-    selectedCampaign === 'all'
-      ? campaigns
-      : campaigns.filter(
-          (campaign) =>
-            campaign.name?.toLowerCase() ===
-            selectedCampaign?.toLowerCase()
-        )
-
-  return (filteredCampaigns || []).reduce(
-    (sum, campaign) =>
-      sum + Number(campaign.spend || 0),
-    0
+  setActivityFeed(
+    buildActivityFeed(
+      filteredClicks,
+      filteredConversions
+    )
   )
-}, [campaigns, selectedCampaign])
 
-const totalClicks = useMemo(() => {
-  return filteredClicks.length
-}, [filteredClicks])
+}, [
+  clicks,
+  conversions,
+  selectedCampaign,
+  selectedPeriod
+])
 
-const epc =
-  totalClicks > 0
-    ? (
-        Number(totalRevenue || 0) /
-        Number(totalClicks || 0)
-      ).toFixed(2)
-    : '0.00'
+const {
+  totalConversions,
+  totalRevenue,
+  totalSpend,
+  totalClicks,
+  epc,
+  conversionRate,
+  profit,
+  roi
+} = calculateMetrics({
+  filteredClicks,
+  filteredConversions,
+  campaigns,
+  selectedCampaign
+})
 
-const conversionRate =
-  totalClicks > 0
-    ? (
-        (totalConversions / totalClicks) *
-        100
-      ).toFixed(2)
-    : 0
-
-const profit =
-  Number(totalRevenue || 0) -
-  Number(totalSpend || 0)
-
-const roi =
-  totalSpend > 0
-    ? ((profit / totalSpend) * 100).toFixed(2)
-    : '0.00'
-
-const desktopClicks = (filteredClicks || []).filter(
-  (click) => click.dispositivo === 'desktop'
-).length
-
-const mobileClicks = (filteredClicks || []).filter(
-  (click) => click.dispositivo === 'mobile'
-).length
+const {
+  desktopClicks,
+  mobileClicks
+} = buildDeviceStats(
+  filteredClicks
+)
 
 // ANTI-FRAUDE
-const botClicks = 0
-const vpnClicks = 0
-const proxyClicks = 0
-const datacenterClicks = 0
 
-const cleanClicks =
-  totalClicks -
-  botClicks -
-  vpnClicks -
-  proxyClicks -
-  datacenterClicks
+const {
+  botClicks,
+  vpnClicks,
+  proxyClicks,
+  datacenterClicks,
+  cleanClicks,
+  trafficScore,
+  trafficQuality
+} = calculateFraud(
+  filteredClicks
+)
 
-const trafficScore =
-  totalClicks > 0
-    ? Math.round(
-        (cleanClicks / totalClicks) * 100
-      )
-    : 100  
-
-const uniqueCampaigns = [
-  ...new Set(
-    (filteredClicks || []).map(
-      (click) => click.campanha || 'unknown'
-    )
-  ),
-]
-
-// PAÍSES
-const countryStats = {}
-
-;(filteredClicks || []).forEach((click) => {
-  const country = click.pais || 'Desconhecido'
-
-  countryStats[country] =
-    (countryStats[country] || 0) + 1
-})
-
-// GRÁFICO
-const groupedClicks = {}
-
-;(filteredClicks || []).forEach((click) => {
-  const date = new Date(
-    click.created_at || click.date
+const fraudStats =
+  buildFraudStats(
+    botClicks,
+    vpnClicks,
+    proxyClicks,
+    datacenterClicks,
+    cleanClicks
   )
 
-  const label = `${date.getHours()}:00`
+const trafficSources =
+  buildTrafficSources(filteredClicks)
 
-  groupedClicks[label] =
-    (groupedClicks[label] || 0) + 1
+const keywordStats =
+  buildKeywordStats(
+    filteredClicks,
+    filteredConversions
+  )
+
+const geoPerformance =
+  buildGeoPerformance(
+    filteredClicks,
+    filteredConversions
+  )
+
+
+
+const mapData =
+  buildMapData(
+    geoPerformance
+  )
+
+const {
+  deviceStats,
+  browserStats,
+  osStats,
+  ispStats
+} = calculateAnalytics({
+  filteredClicks,
+  filteredConversions,
+  campaigns
 })
-const handleCreateCampaign = async () => {
 
+const {
+  campaignStats,
+  aiCampaignScore,
+  deadCampaigns,
+  negativeROI
+} = calculateCampaigns({
+  filteredClicks,
+  filteredConversions,
+  campaigns
+})
+const alerts =
+  calculateAlerts(
+    campaignStats
+  )
+
+const uniqueCampaigns =
+  buildUniqueCampaigns(
+    filteredClicks
+  )
+
+// GRÁFICO
+const hourStats =
+  buildHourStats(
+    filteredClicks,
+    filteredConversions
+  )
+
+const dailyStats =
+  buildDailyStats(
+    filteredClicks,
+    filteredConversions,
+    campaigns
+  )
+
+const handleCreateCampaign = async () => {
   try {
 
-    const { error } = await supabase
-      .from('campaigns')
-      .insert([
-        {
+    if (editingCampaignId) {
+
+      const { error } = await supabase
+        .from('campaigns')
+        .update({
           name: newCampaignName,
           offer: newCampaignOffer,
           spend: Number(newCampaignSpend)
-        }
-      ])
+        })
+        .eq('id', editingCampaignId)
 
-    if (error) {
-      console.error(error)
-      alert('Erro ao criar campanha')
-      return
+      if (error) {
+        console.error(error)
+        return
+      }
+
+    } else {
+
+      const { error } = await supabase
+        .from('campaigns')
+        .insert([
+          {
+            name: newCampaignName,
+            offer: newCampaignOffer,
+            spend: Number(newCampaignSpend)
+          }
+        ])
+
+      if (error) {
+        console.error(error)
+        return
+      }
+
     }
-
-    const { data } = await supabase
-      .from('campaigns')
-      .select('*')
-
-    setCampaigns(data || [])
 
     setNewCampaignName('')
     setNewCampaignOffer('')
     setNewCampaignSpend('')
 
+    setEditingCampaignId(null)
+
     setShowCampaignModal(false)
 
-    alert('Campanha criada com sucesso!')
+    loadData()
 
   } catch (err) {
-
     console.error(err)
-
-    alert('Erro inesperado')
-
   }
-
 }
 
-const chartData = Object.entries(groupedClicks)
-  .map(([hour, total]) => ({
-    name: hour,
-    clicks: total,
-  }))
-  .sort((a, b) => {
-    return parseInt(a.name) - parseInt(b.name)
-  })
+const suspiciousClicks =
+  filteredClicks.filter(
+    (click) =>
+      click.is_bot === true ||
+      click.is_vpn === true ||
+      click.is_proxy === true ||
+      click.is_datacenter === true
+  )
+const trafficQualityStats =
+  buildTrafficQualityStats(
+    cleanClicks,
+    botClicks,
+    vpnClicks,
+    proxyClicks,
+    datacenterClicks
+  )
+
+const blacklistIPs =
+  buildBlacklistIPs(
+    suspiciousClicks
+  )
+
+const offerPerformanceAI =
+  buildOfferPerformance(
+    filteredClicks,
+    filteredConversions
+  )
+
+const chartData = Object.entries(
+  dailyStats
+).map(([day, data]) => ({
+
+  day,
+
+  revenue:
+    data.revenue,
+
+  spend:
+    data.spend,
+
+  profit:
+    data.revenue -
+    data.spend
+
+}))
 
 if (loading) {
   return (
+    <>
+     <style>
+       {pulseAnimation}
+     </style>
+
     <div
       style={{
         background: '#020c2b',
@@ -354,8 +490,9 @@ if (loading) {
     >
       carregando dashboard...
     </div>
-  )
-}
+    </>
+    )
+    }
 
 return (
   <div
@@ -462,433 +599,146 @@ return (
     </div>
 
     {/* CARDS */}
-<div
-  style={{
-    display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '20px',
-    marginBottom: '40px',
-  }}
->
-  <div style={cardStyle}>
-    <h3>Total Clicks</h3>
-    <h1>{totalClicks}</h1>
-  </div>
 
-  <div style={cardStyle}>
-    <h3>Campanhas</h3>
-    <h1>{uniqueCampaigns.length}</h1>
-  </div>
+    <StatsCards
+       totalClicks={totalClicks}
+       uniqueCampaigns={uniqueCampaigns}
+       desktopClicks={desktopClicks}
+       mobileClicks={mobileClicks}
+       totalConversions={totalConversions}
+       totalRevenue={totalRevenue}
+       conversionRate={conversionRate}
+       epc={epc}
+       totalSpend={totalSpend}
+       profit={profit}
+       roi={roi}
+    />
 
-  <div style={cardStyle}>
-    <h3>Desktop</h3>
-    <h1>{desktopClicks}</h1>
-  </div>
+<FinancialChart
+  chartData={chartData}
+/>
 
-  <div style={cardStyle}>
-    <h3>Mobile</h3>
-    <h1>{mobileClicks}</h1>
-  </div>
+<PerformanceTables
+  ispStats={ispStats}
+  osStats={osStats}
+  browserStats={browserStats}
+  dailyStats={dailyStats}
+  tableStyle={tableStyle}
+  td={td}
+/>
 
-  <div style={cardStyle}>
-    <h3>Conversões</h3>
-    <h1>{totalConversions}</h1>
-  </div>
+<ActivityFeed
+  activities={activityFeed}
+/>
 
-  <div style={cardStyle}>
-    <h3>Revenue</h3>
+<LiveVisitors
+  visitors={liveVisitors}
+/>
 
-    <h1>
-      $ {Number(totalRevenue || 0).toFixed(2)}
-    </h1>
-  </div>
+<RecentClicks
+  filteredClicks={filteredClicks}
+  setSelectedClick={setSelectedClick}
+  td={td}
+/>
 
-  <div style={cardStyle}>
-    <h3>CR%</h3>
-    <h1>{conversionRate}%</h1>
-  </div>
+<RecentConversions
+  filteredConversions={filteredConversions}
+  td={td}
+/>
 
-  <div style={cardStyle}>
-    <h3>EPC</h3>
-    <h1>${epc}</h1>
-  </div>
+<MapWorld
+  mapData={mapData}
+/>
 
-  <div style={cardStyle}>
-    <h3>Spend</h3>
+<TrafficScore
+  trafficScore={trafficScore}
+  trafficQuality={trafficQuality}
+/>
 
-    <h1>
-      ${Number(totalSpend).toFixed(2)}
-    </h1>
-  </div>
+<AntiFraud
+  botClicks={botClicks}
+  vpnClicks={vpnClicks}
+  proxyClicks={proxyClicks}
+  datacenterClicks={datacenterClicks}
+  cleanClicks={cleanClicks}
+/>
 
-  <div style={cardStyle}>
-    <h3>Profit</h3>
+<SuspiciousTraffic
+  suspiciousClicks={suspiciousClicks}
+  tableStyle={tableStyle}
+  td={td}
+/>
 
-    <h1>
-      ${Number(profit).toFixed(2)}
-    </h1>
-  </div>
+<TrafficSources
+  trafficSources={trafficSources}
+  tableStyle={tableStyle}
+  td={td}
+/>
 
-  <div style={cardStyle}>
-    <h3>ROI</h3>
-    <h1>{roi}%</h1>
-  </div>
-</div>
+<AutoBlacklist
+  blacklistIPs={blacklistIPs}
+  tableStyle={tableStyle}
+  td={td}
+/>
 
-{/* GRÁFICO */}
-<div
-  style={{
-    background: '#14213d',
-    borderRadius: '20px',
-    padding: '20px',
-    marginBottom: '30px',
-  }}
->
-  <h2 style={{ marginBottom: '20px' }}>
-    📈 Clicks em Tempo Real
-  </h2>
+<TrafficQuality
+  trafficQualityStats={
+    trafficQualityStats
+  }
+/>
 
-  <ResponsiveContainer
-    width="100%"
-    height={300}
-  >
-    <LineChart data={chartData}>
-      <CartesianGrid
-        stroke="#1f2d52"
-        strokeDasharray="3 3"
-      />
+<GeoPerformance
+  geoPerformance={geoPerformance}
+/>
 
-      <XAxis
-        dataKey="name"
-        stroke="#8ea0ff"
-      />
+<OfferPerformance
+  offerPerformanceAI={
+    offerPerformanceAI
+  }
+/>
 
-      <YAxis stroke="#8ea0ff" />
+<NegativeROI
+  negativeROI={negativeROI}
+  tableStyle={tableStyle}
+  td={td}
+/>
 
-      <Tooltip />
+<DeadCampaigns
+  deadCampaigns={deadCampaigns}
+  tableStyle={tableStyle}
+  td={td}
+/>
+<CampaignManager
+  campaigns={campaigns}
+  setEditingCampaignId={setEditingCampaignId}
+  setNewCampaignName={setNewCampaignName}
+  setNewCampaignOffer={setNewCampaignOffer}
+  setNewCampaignSpend={setNewCampaignSpend}
+  setShowCampaignModal={setShowCampaignModal}
+  handleDeleteCampaign={handleDeleteCampaign}
+/>
 
-      <Line
-        type="monotone"
-        dataKey="clicks"
-        stroke="#4ade80"
-        strokeWidth={3}
-      />
-    </LineChart>
-  </ResponsiveContainer>
-</div>
+<CampaignModal
+  showCampaignModal={showCampaignModal}
+  setShowCampaignModal={setShowCampaignModal}
+  newCampaignName={newCampaignName}
+  setNewCampaignName={setNewCampaignName}
+  newCampaignOffer={newCampaignOffer}
+  setNewCampaignOffer={setNewCampaignOffer}
+  newCampaignSpend={newCampaignSpend}
+  setNewCampaignSpend={setNewCampaignSpend}
+  handleCreateCampaign={handleCreateCampaign}
+  editingCampaignId={editingCampaignId}
+/>
 
-{/* PAÍSES */}
-
-<div
-  style={{
-    background: '#14213d',
-    borderRadius: '20px',
-    padding: '20px',
-    marginBottom: '30px',
-  }}
->
-  <h2 style={{ marginBottom: '20px' }}>
-    🌍 Países
-  </h2>
-
-  {Object.entries(countryStats).map(
-    ([country, total]) => (
-      <div
-        key={country}
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          padding: '12px 0',
-          borderBottom:
-            '1px solid #1f2d52',
-        }}
-      >
-        <span>{country}</span>
-
-        <strong>
-          {total} clicks
-        </strong>
-      </div>
-    )
-  )}
-</div>
-
-{/* ÚLTIMOS CLICKS */}
-<div
-  style={{
-    background: '#14213d',
-    borderRadius: '20px',
-    padding: '20px',
-    marginBottom: '30px',
-    overflowX: 'auto',
-  }}
->
-  <h2 style={{ marginBottom: '20px' }}>
-    📊 Últimos Clicks
-  </h2>
-
-  <table
-    width="100%"
-    style={{
-      borderCollapse: 'collapse'
-    }}
-  >
-    <thead>
-      <tr style={{ color: '#8ea0ff' }}>
-        <th align="left">ID</th>
-        <th align="left">Campanha</th>
-        <th align="left">Dispositivo</th>
-        <th align="left">IP</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      {filteredClicks
-        .slice(0, 20)
-        .map(click => (
-          <tr key={click.id}>
-            <td style={td}>
-              {click.id}
-            </td>
-
-            <td style={td}>
-              {click.campanha}
-            </td>
-
-            <td style={td}>
-              {click.dispositivo}
-            </td>
-
-            <td style={td}>
-              {click.ip}
-            </td>
-          </tr>
-        ))}
-    </tbody>
-  </table>
-</div>
-
-{/* ÚLTIMAS CONVERSÕES */}
-<div
-  style={{
-    background: '#14213d',
-    borderRadius: '20px',
-    padding: '20px',
-    marginBottom: '30px',
-    overflowX: 'auto'
-  }}
->
-  <h2 style={{ marginBottom: '20px' }}>
-    💰 Últimas Conversões
-  </h2>
-
-  <table
-    width="100%"
-    style={{
-      borderCollapse: 'collapse'
-    }}
-  >
-    <thead>
-      <tr style={{ color: '#8ea0ff' }}>
-        <th align="left">Click ID</th>
-        <th align="left">FBCLID</th>
-        <th align="left">Payout</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      {(filteredConversions || [])
-        .slice(0, 20)
-        .map(conv => (
-          <tr key={conv.id}>
-            <td style={td}>
-              {conv.click_id}
-            </td>
-
-            <td style={td}>
-              {conv.fbclid}
-            </td>
-
-            <td style={td}>
-              ${conv.payout}
-            </td>
-          </tr>
-        ))}
-    </tbody>
-  </table>
-</div>
-
-{/* TRAFFIC SCORE */}
-<div
-  style={{
-    background: '#14213d',
-    borderRadius: '20px',
-    padding: '25px',
-    marginBottom: '30px'
-  }}
->
-  <h3
-    style={{
-      color: 'white',
-      marginBottom: '10px'
-    }}
-  >
-    🧠 Traffic Score
-  </h3>
-
-  <div
-    style={{
-      color: '#4ade80',
-      fontSize: '42px',
-      fontWeight: 'bold'
-    }}
-  >
-    {trafficScore}
-  </div>
-</div>
-
-{/* ANTI-FRAUDE */}
-<div
-  style={{
-    background: '#14213d',
-    borderRadius: '20px',
-    padding: '25px',
-    marginBottom: '30px',
-    display: 'grid',
-    gridTemplateColumns:
-      'repeat(auto-fit, minmax(180px, 1fr))',
-    gap: '20px'
-  }}
->
-  <div>
-    <h3>🤖 Bots</h3>
-    <h2 style={{ color: '#ff4d4d' }}>
-      {botClicks}
-    </h2>
-  </div>
-
-  <div>
-    <h3>🛡 VPN</h3>
-    <h2 style={{ color: '#ffd600' }}>
-      {vpnClicks}
-    </h2>
-  </div>
-
-  <div>
-    <h3>🌐 Proxy</h3>
-    <h2 style={{ color: '#ff9900' }}>
-      {proxyClicks}
-    </h2>
-  </div>
-
-  <div>
-    <h3>🏢 Datacenter</h3>
-    <h2 style={{ color: '#9b59ff' }}>
-      {datacenterClicks}
-    </h2>
-  </div>
-
-  <div>
-    <h3>✅ Clicks Limpos</h3>
-    <h2 style={{ color: '#4ade80' }}>
-      {cleanClicks}
-    </h2>
-  </div>
-</div>
-
-{/* GERENCIAR CAMPANHAS */}
-<div
-  style={{
-    background: '#14213d',
-    borderRadius: '20px',
-    padding: '25px',
-    marginBottom: '30px'
-  }}
->
-  <h2
-    style={{
-      marginBottom: '20px'
-    }}
-  >
-    📁 Gerenciar Campanhas
-  </h2>
-
-  {(campaigns || []).map((campaign) => (
-    <div
-      key={campaign.id}
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '15px 0',
-        borderBottom: '1px solid #1f2d52'
-      }}
-    >
-      <div>
-        <h3>{campaign.name}</h3>
-
-        <p
-          style={{
-            color: '#8ea2ff'
-          }}
-        >
-          Oferta: {campaign.offer}
-        </p>
-
-        <p
-          style={{
-            color: '#4ade80'
-          }}
-        >
-          Spend: ${campaign.spend || 0}
-        </p>
-      </div>
-
-      <div
-        style={{
-          display: 'flex',
-          gap: '10px'
-        }}
-      >
-        <button
-          style={{
-            background: '#2563eb',
-            color: 'white',
-            border: 'none',
-            padding: '10px 15px',
-            borderRadius: '10px',
-            cursor: 'pointer'
-          }}
-        >
-          ✏️ Editar
-        </button>
-
-        <button
-          style={{
-            background: '#ef4444',
-            color: 'white',
-            border: 'none',
-            padding: '10px 15px',
-            borderRadius: '10px',
-            cursor: 'pointer'
-          }}
-        >
-          🗑️ Excluir
-        </button>
-      </div>
-    </div>
-  ))}
-</div>
+<ClickDetailsModal
+  selectedClick={selectedClick}
+  setSelectedClick={setSelectedClick}
+  handleBlockIP={handleBlockIP}
+/>
 
 </div>
 )
-}
-
-const cardStyle = {
-  background: '#14213d',
-  padding: '25px',
-  borderRadius: '20px',
 }
 
 const tableStyle = {
