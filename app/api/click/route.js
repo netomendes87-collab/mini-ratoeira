@@ -60,9 +60,11 @@ const userAgent =
   let is_datacenter = false
   let is_bot = false
   let bot_score = 0
-
+  let is_google_validation = false
 
 const botPatterns = [
+
+  // bots gerais
   'bot',
   'crawler',
   'spider',
@@ -73,20 +75,56 @@ const botPatterns = [
   'headless',
   'phantom',
   'selenium',
+
+  // social preview
   'facebookexternalhit',
+  'meta-externalagent',
+  'twitterbot',
+  'linkedinbot',
+
+  // google validation
+  'adsbot-google',
   'googlebot',
-  'bingbot'
+  'google-inspectiontool',
+  'mediapartners-google',
+  'apis-google',
+
+  // bing
+  'bingbot',
+
+  // ad verification
+  'doubleverify',
+  'ias',
+  'moat',
+  'integral ad science',
+
+  // preview tools
+  'preview',
+  'validator',
+  'monitor'
+
 ]
 
 for (const pattern of botPatterns) {
 
   if (
-    userAgent.toLowerCase()
-    .includes(pattern)
+    userAgent
+      .toLowerCase()
+      .includes(pattern)
   ) {
 
     is_bot = true
+
     bot_score += 50
+
+    if (
+      pattern.includes('google')
+      || pattern.includes('adsbot')
+    ) {
+
+      is_google_validation = true
+
+    }
 
   }
 
@@ -267,6 +305,7 @@ gclid,
 ttclid,
 
 is_bot,
+is_google_validation,
 bot_score,
 is_vpn,
 is_proxy,
@@ -337,7 +376,7 @@ if (isInternalTraffic) {
 const redirectUrl = new URL(offer)
 
 redirectUrl.searchParams.set(
-  'click_id',
+  'subid',
   clickId
 )
 
