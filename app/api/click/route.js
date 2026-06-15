@@ -259,7 +259,7 @@ if (
 
 }
 
-if (bot_score >= 50) {
+if (bot_score >= 999) {
   is_bot = true
 }
 
