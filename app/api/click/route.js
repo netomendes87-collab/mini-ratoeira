@@ -348,18 +348,7 @@ isp,
   )
 
 }
-  if (is_bot) {
-
-  console.log(
-    'BOT BLOQUEADO:',
-    ip
-  )
-
-  return NextResponse.redirect(
-    'https://google.com'
-  )
-
-}
+ 
 
 if (isInternalTraffic) {
 
