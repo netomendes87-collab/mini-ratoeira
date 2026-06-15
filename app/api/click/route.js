@@ -1,7 +1,16 @@
-```js
 import { NextResponse } from 'next/server'
 
 import { createClient } from '@supabase/supabase-js'
+
+console.log(
+  'URL:',
+  process.env.NEXT_PUBLIC_SUPABASE_URL
+)
+
+console.log(
+  'KEY:',
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+)
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -10,53 +19,80 @@ const supabase = createClient(
 
 export async function GET(req) {
 
-  const { searchParams } =
-    new URL(req.url)
+  try {
 
-  const campanha =
-    searchParams.get('campanha')
+    const url = new URL(req.url)
 
-  const gclid =
-    searchParams.get('gclid')
+    const searchParams = url.searchParams
 
-  const offer =
-    searchParams.get('offer')
+    const campanha =
+      searchParams.get('campanha')
 
-  const clickId =
-    crypto.randomUUID()
+    const gclid =
+      searchParams.get('gclid')
 
-  const { error } =
-    await supabase
-      .from('clicks')
-      .insert([
-        {
-          click_id: clickId,
-          campanha,
-          gclid
-        }
-      ])
+    const offer =
+      searchParams.get('offer')
 
-  if (error) {
+    const clickId =
+      crypto.randomUUID()
 
-    console.error(error)
+    console.log('CLICK RECEBIDO')
+
+    const { error } =
+      await supabase
+        .from('clicks')
+        .insert([
+          {
+            click_id: clickId,
+            campanha,
+            gclid
+          }
+        ])
+
+    if (error) {
+
+      console.error('ERRO SUPABASE:', error)
+
+      return NextResponse.json({
+        success: false,
+        error
+      })
+
+    }
+
+    console.log('CLICK SALVO')
+
+    if (!offer) {
+
+      return NextResponse.json({
+        success: true,
+        click_id: clickId
+      })
+
+    }
+
+    const redirectUrl =
+      new URL(offer)
+
+    redirectUrl.searchParams.set(
+      'subid',
+      clickId
+    )
+
+    return NextResponse.redirect(
+      redirectUrl
+    )
+
+  } catch (err) {
+
+    console.error('ERRO API:', err)
 
     return NextResponse.json({
-      error
+      success: false,
+      error: String(err)
     })
 
   }
 
-  const redirectUrl =
-    new URL(offer)
-
-  redirectUrl.searchParams.set(
-    'subid',
-    clickId
-  )
-
-  return NextResponse.redirect(
-    redirectUrl
-  )
-
 }
-```
